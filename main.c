@@ -1,82 +1,61 @@
 #include "include/raylib.h"
-#include "stdio.h"
-#include "stdlib.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define Clay implementation before including (ONLY in ONE source file)
+// Define Clay implementation ONLY in main.c
 #define CLAY_IMPLEMENTATION
 #include "include/clay.h"
+#include "app.h"
 
-typedef struct {
-    const char *appName;
-    int instanceId;
-} MyAppContext;
-
+// Error handler
 void MyErrorHandler(Clay_ErrorData err) {
-    // cast back to pointer - now userData is already a void*
-    MyAppContext *ctx = (MyAppContext*)(err.userData);
-
-    if (ctx) {
-        printf("[%s #%d] Clay Error: %s\n",
-               ctx->appName, ctx->instanceId, err.errorText.chars);
-    } else {
-        printf("Clay Error: %s\n", err.errorText.chars);
-    }
+    printf("Clay Error: %s\n", err.errorText.chars);
 
     switch (err.errorType) {
         case CLAY_ERROR_TYPE_DUPLICATE_ID:
-            printf("Duplicate ID error occurred.\n");
+            printf("Duplicate ID error.\n");
             break;
         case CLAY_ERROR_TYPE_ARENA_CAPACITY_EXCEEDED:
-            printf("Arena too small, increase memory.\n");
+            printf("Arena too small.\n");
             break;
         default:
             printf("Other error.\n");
     }
 }
 
-const float ScreenWidth = 1400.0f;
-const float ScreenHeight = 792.0f;
-
 int main() {
-    MyAppContext ctx = { "CGPA Calculator", 1 };
+    const int screenWidth = 1400;
+    const int screenHeight = 792;
 
-    // Init RayLib
-    InitWindow((int) ScreenWidth, (int) ScreenHeight, "CGPA Calculator In C UI");
+    // Initialize Raylib
+    InitWindow(screenWidth, screenHeight, "CGPA Calculator - Clay UI Test");
 
-    // Init Clay
-    int64_t clayMemorySize = Clay_MinMemorySize();
+    // Initialize Clay
+    uint64_t clayMemorySize = Clay_MinMemorySize();
     Clay_Arena memoryArena = {
         .memory = malloc(clayMemorySize),
         .capacity = clayMemorySize
     };
 
-    Clay_Dimensions dimensions = {
-        .width = ScreenWidth,
-        .height = ScreenHeight
-    };
-
-    Clay_ErrorHandler error = {
+    Clay_Dimensions dimensions = {screenWidth, screenHeight};
+    Clay_ErrorHandler errorHandler = {
         .errorHandlerFunction = MyErrorHandler,
-        .userData = (void*)&ctx   // Direct cast to void* instead of intptr_t
+        .userData = NULL
     };
 
-    Clay_Initialize(memoryArena, dimensions, error);
+    Clay_Initialize(memoryArena, dimensions, errorHandler);
 
-    // Set target FPS
-    SetTargetFPS(144);
+    // Load fonts
+    Font fonts[2];
+    fonts[FONT_ID_BODY_24] = GetFontDefault();
+    fonts[FONT_ID_BODY_16] = GetFontDefault();
+    Clay_SetMeasureTextFunction(Raylib_MeasureText, fonts);
 
-    // Main Application Loop
+    SetTargetFPS(60);
+
+    // Main loop
     while (!WindowShouldClose()) {
-        // Logic Code
-        BeginDrawing();
-        ClearBackground(YELLOW);
-
-        // Rendered Stuff
-        // Clay UI usage will go here
-
-        DrawText("Clay UI is loaded!", 250, 300, 20, BLACK);
-
-        EndDrawing();
+        UpdateDrawFrame(fonts);
     }
 
     // Cleanup
